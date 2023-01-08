@@ -372,6 +372,7 @@ $$$("gotoform").onsubmit = function (ev) {
     host = this.value
     if (pageView) pageView.loadImg()
     localStorage.setItem(key, host)
+    loadPage()
   }
 }
 
