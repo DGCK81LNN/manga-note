@@ -270,10 +270,28 @@ class NoteView {
   }
 }
 
+/** @param {Blob | Response | Promise<Blob | Response>} source */
+async function loadData(source) {
+  try {
+    source = await source
+
+    if (source instanceof Response && !source.ok)
+      throw `Error response: ${source.status} ${source.statusText}`
+
+    const json = await source.text()
+    data = JSON.parse(json)
+  } catch (err) {
+    alert("An error occurred while loading the data.\n" + err)
+    return
+  }
+  initialize()
+}
+
 function initialize() {
-  $$$("modal-artworkinfo").hidden = !data
-  if (data) {
-    $$$("source").textContent = data.id || "?"
+  const somethingLoaded = data && data.id
+  $$$("modal-artworkinfo").hidden = !somethingLoaded
+  if (somethingLoaded) {
+    $$$("source").textContent = `Pixiv artwork #${data.id}`
     $$$("source").href = data.id && `https://pixiv.net/artworks/${data.id}`
     $$$("artist").textContent = data.artist || "?"
     $$$("artist").href =
@@ -444,16 +462,8 @@ $$$("openbtn").onclick = function () {
   const $input = document.createElement("input")
   $input.type = "file"
   $input.accept = ".json,application/json"
-  $input.onchange = async () => {
-    const file = $input.files[0]
-    try {
-      const json = await file.text()
-      data = JSON.parse(json)
-    } catch (err) {
-      alert("An error occurred while opening.\n" + err)
-      return
-    }
-    initialize()
+  $input.onchange = () => {
+    loadData($input.files[0])
   }
   $input.click()
 }
@@ -464,6 +474,18 @@ $$$("openbtn").onclick = function () {
     ev.stopPropagation()
   }
 }
+
+!function () {
+  const search = new URLSearchParams(location.search)
+  if (search.has("id")) {
+    const id = search.get("id")
+    if (id !== String(parseInt(id)))
+      return alert("Invalid id in URL parameter")
+
+    const path = `./data/${id}.json`
+    loadData(fetch(path))
+  }
+}()
 
 initialize()
 bootstrap.Modal.getOrCreateInstance("#modal").show()
